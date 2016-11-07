@@ -1,0 +1,119 @@
+--- #
+- hosts: 52.87.230.221
+  user: ansible
+  become: true
+  gather_facts: yes
+  tasks:
+  - name: Updating
+    apt: update_cache=yes
+  - name: Installing prerequisties, git and nodejs npm
+    apt: pkg={{ item }} state=latest
+    with_items:
+    - xz-utils
+    - build-essential
+    - libsnappy-dev
+    - zlib1g-dev
+    - libbz2-dev
+    - libgflags-dev
+    - libyaml-dev
+    - libpython2.7-dev
+    - git
+  - name: installing nodejs
+    get_url:
+     url: https://nodejs.org/dist/v0.12.7/node-v0.12.7-linux-x64.tar.gz
+     dest: /home/ansible/
+     mode: 0755
+  - shell: cd /usr/local && tar --strip-components 1 -xzf /home/ansible/node-v0.12.7-linux-x64.tar.gz
+  - name: Downloading go
+    get_url:
+     url: https://storage.googleapis.com/golang/go1.6.2.linux-amd64.tar.gz
+     dest: /tmp/
+     mode: 0755
+  - shell: tar -C /home/ansible/ -xzf /tmp/go1.6.2.linux-amd64.tar.gz
+  - name: creating gopath directory
+    file: path=/home/ansible/gopath state=directory owner=ansible group=ansible mode=0777
+  - name: Copying files to gopath
+#    copy: src=/home/ansible/go/* dest=/home/ansible/gopath/ mode=0755 owner=ansible group=ansible directory_mode=yes remote_src=true
+    shell: cp -R /home/ansible/go/* /home/ansible/gopath/
+  - name: Create a new directory
+    file: path=/home/ansible/gopath/src/github.com/hyperledger state=directory owner=ansible group=ansible mode=777
+  - name: Cloning the fabric repository
+    git: repo=https://github.com/hyperledger/fabric.git clone=yes dest=/home/ansible/gopath/src/github.com/hyperledger/fabric/ 
+  - file: dest=/home/ansible/gopath/src/github.com/hyperledger/fabric/ state=directory owner=ansible group=ansible mode=0755
+#  - action: shell chown -R ansible:ansible /home/ansible/gopath/
+  - name: Updating
+    apt: update_cache=yes
+  - name: Installing apt-transport and ca certificates
+    apt: pkg={{ item}} state=present
+    with_items:
+     - apt-transport-https
+     - ca-certificates
+  - file: path=/etc/apt/sources.list.d/docker.list state=touch mode=0777 
+  - name: Copying docker repo to the docker.list
+    lineinfile: dest=/etc/apt/sources.list.d/docker.list state=present line='deb https://apt.dockerproject.org/repo ubuntu-trusty main'
+#    shell: echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" >/tmp/docker.list
+#    become: true
+#  - name: Copying the docker.list to /etc/apt/sources.list.d
+#    action: shell cp /tmp/docker.list /etc/apt/sources.list.d/docker.list
+#    become: true
+#    register: result
+#  - debug: var=result
+  - name: Copying the apt-key
+    apt_key: keyserver=hkp://p80.pool.sks-keyservers.net:80 id=58118E89F3A912897C070ADBF76221572C52609D
+    become: true
+#  - action: shell uname -r
+#    register: value
+
+  - name: Installing linux-image-extra and linux-image-extra-virtual
+    apt: pkg={{ item }} state=present
+    with_items:
+     - linux-image-extra-{{ ansible_kernel }}
+     - linux-image-extra-virtual
+  - name: Updating
+    apt: update_cache=yes
+  - name: Installing docker engine
+    apt: pkg=docker-engine state=latest
+  - name: Adding the ansible to docker group
+    shell: usermod -aG docker ansible
+  - lineinfile: dest=/etc/default/docker state=present line='DOCKER_OPTS=\"-s=aufs -r=true --api-cors-header='*' -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock \"'
+#  - action: shell echo "DOCKER_OPTS=\"-s=aufs -r=true --api-cors-header='*' -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock \"" > /etc/default/docker
+#    become: true
+  - service: name=docker state=restarted
+  - name: Setting the paths
+    shell: echo " export PATH=$PATH:/home/ansible/gopath/bin\nexport GOPATH=/home/ansible/gopath\nexport GOROOT=/home/ansible/go" >/etc/profile.d/setup.sh
+  - shell: source /etc/profile.d/setup.sh
+    args:
+      executable: /bin/bash
+  - name: Cloning the rocksdb
+    git: repo=https://github.com/facebook/rocksdb.git clone=yes dest=/home/ansible/rocksdb
+  - shell: git checkout v4.1
+    args:
+      chdir: /home/ansible/rocksdb
+  - shell: PORTABLE=1 make shared_lib
+    args:
+      chdir: /home/ansible/rocksdb
+    register: result
+  - debug: var=result
+  - make: chdir=/home/ansible/rocksdb target=install-shared
+    environment:
+      INSTALL_PATH: /usr/local
+  - shell: ldconfig
+  - name: Installing pip
+    apt: pkg=python-pip state=latest
+  - name: Installing nose, docker-compose, behave
+    pip: name={{ item }} state=latest
+    with_items:
+    - behave
+    - nose
+    - docker-compose
+    - flask==0.10.1
+    - python-dateutil==2.2
+    - pytz==2014.3
+    - pyyaml==3.10
+    - couchdb==1.0
+    - flask-cors==2.0.1
+    - requests==2.6.2
+    - protobuf
+    - grpcio==0.13.1
+    - six
+

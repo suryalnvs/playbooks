@@ -1,0 +1,78 @@
+  - name: start membersrvc
+    docker_container:
+      name: caserver
+      state: started
+      image: "rameshthoomu/membersrvc:{{commit}}"
+      command: membersrvc
+      ports:
+      - "50052:7051"
+      - "{{ CA_PORT }}:{{ CA_PORT }}"
+  - name: delay
+    shell: sleep 10 
+  - name: Starting peer0
+    docker_container:
+      name: PEER0
+      state: started
+      recreate: yes
+      image: "rameshthoomu/peer:{{commit}}"
+      command: peer node start
+      ports:
+      - "{{ REST_PORT }}:7050"
+      - "{{ USE_PORT }}:{{ PEER_gRPC }}"
+      env:
+        CORE_VM_ENDPOINT: "http://{{ ip.stdout }}:{{ port.stdout }}"
+        CORE_PEER_ID: "vp0"
+        CORE_SECURITY_ENABLED: true
+        CORE_SECURITY_PRIVACY: true
+        CORE_PEER_ADDRESSAUTODETECT: false
+        CORE_PEER_ADDRESS: "{{ ip.stdout }}:{{ USE_PORT }}"
+        CORE_PEER_PKI_ECA_PADDR: "{{ip.stdout}}:{{CA_PORT}}"
+        CORE_PEER_PKI_TCA_PADDR: "{{ ip.stdout }}:{{ CA_PORT }}"
+        CORE_PEER_PKI_TLSCA_PADDR: "{{ ip.stdout }}:{{ CA_PORT }}"
+        CORE_PEER_LISTENADDRESS: "0.0.0.0:{{ PEER_gRPC }}"
+        CORE_PEER_VALIDATOR_CONSENSUS_PLUGIN: "{{ CONSENSUS_MODE }}"
+        CORE_PBFT_GENERAL_N: 4
+        CORE_PBFT_GENERAL_MODE: "{{ PBFT_MODE }}"
+        CORE_PBFT_GENERAL_TIMEOUT_REQUEST: 10s
+        CORE_VM_DOCKER_TLS_ENABLED: false
+        CORE_SECURITY_ENROLLID: test_vp0
+        CORE_SECURITY_ENROLLSECRET: MwYpmSRjupbT
+  - name: Starting PEERS
+    docker_container:
+      name: "PEER{{ item.name}}"
+      state: started
+      recreate: yes
+      image: "rameshthoomu/peer:{{commit}}"
+      command: "peer node start"
+      ports:
+      - "{{ item.restport }}:7050"
+      - "{{ item.useport }}:{{ PEER_gRPC }}"
+      env:
+        CORE_VM_ENDPOINT: "http://{{ ip.stdout }}:{{ port.stdout }}"
+        CORE_PEER_ID: "vp{{ item.name }}"
+        CORE_SECURITY_ENABLED: true
+        CORE_SECURITY_PRIVACY: true
+        CORE_PEER_ADDRESSAUTODETECT: true
+        CORE_PEER_DISCOVERY_ROOTNODE: "{{ ip.stdout }}:30001"
+        CORE_PEER_PKI_ECA_PADDR: "{{ ip.stdout }}:{{ CA_PORT }}"
+        CORE_PEER_PKI_TCA_PADDR: "{{ ip.stdout }}:{{ CA_PORT }}"
+        CORE_PEER_PKI_TLSCA_PADDR: "{{ ip.stdout }}:{{ CA_PORT }}"
+        CORE_PEER_LISTENADDRESS: "0.0.0.0:{{ PEER_gRPC }}"
+        CORE_PEER_VALIDATOR_CONSENSUS_PLUGIN: "{{ CONSENSUS_MODE }}"
+        CORE_PBFT_GENERAL_N: 4
+        CORE_PBFT_GENERAL_MODE: "{{ PBFT_MODE }}"
+        CORE_PBFT_GENERAL_TIMEOUT_REQUEST: 10s
+        CORE_VM_DOCKER_TLS_ENABLED: false
+        CORE_SECURITY_ENROLLID: "test_vp{{ item.name }}"
+        CORE_SECURITY_ENROLLSECRET: "{{ item.secretID }}"
+    with_items:
+      - { name: '1', restport: '{{REST_PORT | int + 10}}', useport: '{{USE_PORT | int + 2}}', secretID: '5wgHK9qqYaPy' }
+      - { name: '2', restport: '{{REST_PORT | int + 20}}', useport: '{{USE_PORT | int + 4}}', secretID: 'vQelbRvja7cJ' }
+      - { name: '3', restport: '{{REST_PORT | int + 30}}', useport: '{{USE_PORT | int + 6}}', secretID: '9LKqKH5peurL' }
+      - { name: '4', restport: '{{REST_PORT | int + 40}}', useport: '{{USE_PORT | int + 8}}', secretID: 'Pqh90CEW5juZ' }
+      - { name: '5', restport: '{{REST_PORT | int + 50}}', useport: '{{USE_PORT | int + 10}}', secretID: 'FfdvDkAdY81P' }
+      - { name: '6', restport: '{{REST_PORT | int + 60}}', useport: '{{USE_PORT | int + 12}}', secretID: 'QiXJgHyV4t7A' }
+      - { name: '7', restport: '{{REST_PORT | int + 70}}', useport: '{{USE_PORT | int + 14}}', secretID: 'twoKZouEyLyB' }
+      - { name: '8', restport: '{{REST_PORT | int + 80}}', useport: '{{USE_PORT | int + 16}}', secretID: 'BxP7QNh778gI' }
+      - { name: '9', restport: '{{REST_PORT | int + 90}}', useport: '{{USE_PORT | int + 18}}', secretID: 'wu3F1EwJWHvQ' }
+    when: item.name <= "{{peers | int - 1}}"

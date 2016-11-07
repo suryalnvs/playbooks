@@ -1,0 +1,15 @@
+--- #
+- hosts: 54.211.46.134
+  user: ansible
+  become: true
+  gather_facts: yes
+  tasks:
+  - name: testing
+    shell: echo "nothing"
+    when: ansible_architecture == "ppc64le"
+  - name: testing
+    shell: echo "nothing"
+    when: ansible_architecture == "s390x"
+  - name: getting the os architecture
+    shell: echo "Hello World" > /home/ansible/hello.txt
+    when: ansible_architecture == "x86_64"

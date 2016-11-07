@@ -1,0 +1,47 @@
+  - name: Starting peer0 with Security disabled
+    docker_container:
+      name: PEER0
+      state: started
+      recreate: yes
+      image: hyperledger/fabric-peer
+      command: peer node start
+      ports:
+      - "{{REST_PORT}}:7050"
+      - "{{USE_PORT}}:{{ PEER_gRPC }}"
+      env:
+        CORE_VM_ENDPOINT: "http://{{ ip.stdout }}:{{ port.stdout }}"
+        CORE_PEER_ID: "vp0"
+        CORE_PEER_ADDRESSAUTODETECT: true
+        CORE_PEER_ADDRESS: "{{ ip.stdout }}:{{USE_PORT}}"
+        CORE_PEER_LISTENADDRESS: "0.0.0.0:{{ PEER_gRPC }}"
+        CORE_VM_DOCKER_TLS_ENABLED: false
+  - name: Start Peers with security disabled
+    docker_container:
+      name: "PEER{{item.name}}"
+      state: started
+      recreate: yes
+      image: hyperledger/fabric-peer
+      command: "peer node start"
+      ports:
+      - "{{ item.restport }}:7050"
+      - "{{ item.useport }}:{{ PEER_gRPC }}"
+      env:
+        CORE_VM_ENDPOINT: "http://{{ ip.stdout }}:{{ port.stdout }}"
+        CORE_PEER_ID: "vp{{ item.name }}"
+        CORE_PEER_ADDRESSAUTODETECT: false
+        CORE_PEER_ADDRESS: "{{ ip.stdout }}:{{ item.useport }}"
+        CORE_PEER_DISCOVERY_ROOTNODE: "{{ ip.stdout }}:30001"
+        CORE_PEER_LISTENADDRESS: "0.0.0.0:{{ PEER_gRPC }}"
+        CORE_VM_DOCKER_TLS_ENABLED: false
+    with_items:
+      - { name: '1', restport: '{{REST_PORT | int + 10}}', useport: '{{USE_PORT | int + 2}}' }
+      - { name: '2', restport: '{{REST_PORT | int + 20}}', useport: '{{USE_PORT | int + 4}}' }
+      - { name: '3', restport: '{{REST_PORT | int + 30}}', useport: '{{USE_PORT | int + 6}}' }
+      - { name: '4', restport: '{{REST_PORT | int + 40}}', useport: '{{USE_PORT | int + 8}}' }
+      - { name: '5', restport: '{{REST_PORT | int + 50}}', useport: '{{USE_PORT | int + 10}}' }
+      - { name: '6', restport: '{{REST_PORT | int + 60}}', useport: '{{USE_PORT | int + 12}}' }
+      - { name: '7', restport: '{{REST_PORT | int + 70}}', useport: '{{USE_PORT | int + 14}}' }
+      - { name: '8', restport: '{{REST_PORT | int + 80}}', useport: '{{USE_PORT | int + 16}}' }
+      - { name: '9', restport: '{{REST_PORT | int + 90}}', useport: '{{USE_PORT | int + 18}}' }
+    when: item.name < "{{peers | int + 1}}"
+

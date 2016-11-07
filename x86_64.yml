@@ -1,0 +1,15 @@
+  - name: pulling the baseimage
+    action: shell docker pull rameshthoomu/baseimage:v0.6
+  - shell: docker tag rameshthoomu/baseimage:v0.6 hyperledger/fabric-baseimage:latest
+  - name: pulling hyperledger/fabric-peer
+    docker_image:
+      name: rameshthoomu/peer
+      tag: "{{commit}}"
+  - name: pulling hyperledger/fabric-membersrvc
+    docker_image:
+      name: rameshthoomu/membersrvc
+      tag: "{{commit}}"
+#  - include: securityenabled.yml
+#    when: security == "y"
+#  - include: securitydisabled.yml
+#    when: security == "n"

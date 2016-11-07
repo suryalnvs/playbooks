@@ -1,0 +1,15 @@
+  - name: pulling the baseimage
+    action: shell docker pull hyperledger/fabric-ppc64le-baseimage
+  - name: pulling peer for power machine
+    docker_image:
+      name: hyperledger/fabric-peer-ppc64le
+      tag: "{{commit}}"
+  - name: pulling membersrvc for power machine
+    docker_image:
+      name: hyperledger/fabric-membersrvc-ppc64le
+      tag: "{{commit}}"
+#  - include: securityenabled.yml
+#    when: security == "y"
+#  - include: securitydisabled.yml
+#    when: security == "n"
+

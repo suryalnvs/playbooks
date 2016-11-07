@@ -1,0 +1,15 @@
+  - name: pulling the baseimage
+    action: shell docker pull hyperledger/fabric-s390x-baseimage
+  - name: pulling peer image for z-machine
+    docker_image:
+      name: hyperledger/fabric-peer-s390x
+      tag: "{{commit}}"
+  - name: pulling membersrvc image for z-machine
+    docker_image:
+      name: hyperledger/fabric-membersrvc-s390x
+      tag: "{{commit}}"
+#  - include: securityenabled.yml
+#    when: security == "y"
+#  - include: securitydisabled.yml
+#    when: security == "n"
+

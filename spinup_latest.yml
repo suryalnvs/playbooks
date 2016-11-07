@@ -1,0 +1,54 @@
+--- # Starting the PEERS
+- hosts: 52.91.145.183
+  user: ansible
+  become: true
+  gather_facts: yes
+  vars_prompt:
+  - name: peers
+    prompt: Number of peers
+    default: 4
+    private: no
+  - name: security
+    prompt: Security level(y or n)
+    default: n
+    private: no
+  - name: commit
+    prompt: Commit 
+    default: latest
+    private: no
+  vars:
+    REST_PORT: 7050
+    USE_PORT: 30001
+    CA_PORT: 7054
+    PEER_gRPC: 7051
+    PBFT_MODE: batch
+    CONSENSUS_MODE: pbft
+  tasks: 
+  - name: Getting the docker ip address
+    shell: ifconfig docker0 | grep "inet" | awk '{print $2}' | cut -d ':' -f 2
+    register: ip
+  - name: Getting docker port
+    shell: netstat -tunlp | grep docker | awk '{print $4'} | cut -d ":" -f 4
+    register: port
+  - lineinfile: dest=/etc/default/docker state=present line='DOCKER_OPTS=\"-s=aufs -r=true --api-cors-header='*' -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock \"'
+  - name: Restarting docker
+    service: name=docker state=restarted
+  - name: Removing docker containers
+    action: shell docker rm -f $(docker ps -aq)
+    ignore_errors: yes
+  - name: For z
+    include: s390x.yml
+    when: ansible_architecture == "s390x"
+  - name: For power
+    include: ppc64le.yml
+    when: ansible_architecture == "ppc64le"
+  - name: for x86_64
+    include: x86_64.yml
+    when: ansible_architecture == "x86_64"
+  - include: securityenabled.yml
+    when: security == "y"
+  - include: securitydisabled.yml
+    when: security == "n"
+
+
+  

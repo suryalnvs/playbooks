@@ -1,0 +1,45 @@
+--- #
+- hosts: 161.202.190.162
+  user: peer
+  gather_facts: no
+  become: true
+  tasks:
+#  - shell: adduser ansible
+#  - shell: usermod -aG sudo ansible
+  - name: Updating
+    apt: update_cache=yes
+  - name: Installing apt-transport and ca certificates
+    apt: pkg={{ item}} state=present
+    with_items:
+     - apt-transport-https
+     - ca-certificates
+     - python-pip
+#  - name: Installing docker-py
+#    pip: name='docker-py==1.9.0' 
+  - action: shell apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+  - name: Adding new repository to docker.list
+    shell: echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" > /etc/apt/sources.list.d/docker.list
+    become: true
+    register: result
+  - debug: var=result
+  - name: Updating the apt repositories
+    apt: update_cache=yes
+  - action: shell uname -r 
+    register: value
+  - name: Installing linux-image-extra and linux-image-extra-virtual
+    apt: pkg={{ item}} state=present
+    with_items:
+     - linux-image-extra-{{ value.stdout }}
+     - linux-image-extra-virtual
+  - name: Updateing the apt repositories
+    apt: update_cache=yes
+  - name: Installing docker-engine
+    apt: pkg=docker-engine state=latest
+  - name: Configuring docker
+    shell: echo "DOCKER_OPTS=\"-s=aufs -r=true --api-cors-header='*' -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock \"" > /etc/default/docker
+    become: true
+  - name: Adding user to docker group
+    shell: usermod -aG docker peer
+  - name: restarting the docker
+    service: name=docker state=restarted
+
